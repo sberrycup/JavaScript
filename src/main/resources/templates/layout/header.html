@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<header th:fragment="header-basic" class="container-fluid my-4">
+
+    <!-- 로그인 링크(로그아웃, 마이페이지) -->
+    <div class="container d-flex justify-content-end">
+        <!--        <a href="/login/login.do">로그인</a>-->
+        <div th:if="${session.memberEmail} == null">
+            <a href="/login/login.do">로그인</a>
+        </div>
+
+        <div th:unless="${session.memberEmail} == null">
+            <a href="/login/logout.do" class="me-3">로그아웃</a>
+            <!--            <a  th:if="${userInfo.adminYn.equals('Y')}" href="/login/memberManage.do" class="me-3">관리자 페이지</a>-->
+            <a href="/login/memberManage.do" th:if="${userInfo.adminYn} == 'Y'" class="me-3">관리자 페이지</a>
+            <a href="/login/" th:attrappend="href=${userInfo.memberEmail}">마이 페이지</a>
+        </div>
+        <!--        <a href="/login/logout.do" class="me-3">로그아웃</a>-->
+        <!--        <a href="/login/memberManage.do" th:if="${userInfo.adminYn.equals('Y')}" class="me-3">관리자 페이지</a>-->
+        <!--        <a href="/login/" th:attrappend="href=${userInfo.memberEmail}">마이 페이지</a>-->
+    </div>
+
+    <!-- 로고 -->
+    <div class="container">
+        <div class="logo">
+            <a href="/main/">
+                <img src="/imgSource/logo.png" class="img-fluid">
+            </a>
+        </div>
+    </div>
+
+    <!-- 네비바 -->
+    <nav class="container-fluid navbar navbar-expand-lg border-bottom mt-5">
+        <div class="container">
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-1g-0">
+                    <li class="nav-item mx-3">
+                        <div>
+                            <a class="nav-link active fs-3" href="/main/">홈</a>
+                        </div>
+                    </li>
+                    <li class="nav-item mx-3">
+                        <a class="nav-link active fs-3" href="/foodUrl">식품</a>
+                    </li>
+                    <li class="nav-item mx-3">
+                        <a class="nav-link active fs-3" href="/foodDiet">내 식단</a>
+                    </li>
+                    <li class="nav-item mx-3">
+                        <a class="nav-link active fs-3" href="/foodMonths.do">월별 식단</a>
+                    </li>
+                </ul>
+                <form class="d-flex">
+                    <input class="form-control me-2 rounded-0" type="search" placeholder="Search" aria-label="Search">
+                    <button class="btn btn-outline-success" type="submit">Search</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+</header>
+</body>
+</html>

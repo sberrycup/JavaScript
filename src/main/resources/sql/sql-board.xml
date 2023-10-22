@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bitc.java505_team4.mapper.BoardMapper">
+<!--    게시글 리스트 불러오기-->
+    <select id="selectBoardList" resultType="com.bitc.java505_team4.dto.BoardDTO">
+        SELECT board_num, board_memberName, board_contents, board_date, board_like, board_file
+        FROM food_board WHERE deleted_yn = 'N'
+        ORDER BY board_num DESC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+<!--    게시글 개수 -->
+    <select id="getBoardCount" resultType="int">
+        select COUNT(board_num) AS count FROM food_board WHERE deleted_yn = 'N';
+    </select>
+
+<!--    게시글 작성 -->
+    <insert id="insertBoard" parameterType="com.bitc.java505_team4.dto.BoardDTO">
+        INSERT INTO food_board (board_memberName, board_contents, board_date, board_img, board_file) VALUES (#{boardMemberName}, #{boardContents}, NOW(), #{boardImg}, #{boardFile})
+    </insert>
+    
+<!--    게시글 수정 -->
+    <update id="updateBoard" parameterType="com.bitc.java505_team4.dto.BoardDTO">   
+        UPDATE food_board SET board_contents = #{boardContents}, board_date = NOW() WHERE board_num = #{boardNum}
+    </update>
+    
+<!--    게시글 삭제 -->
+    <delete id="deleteBoard" parameterType="int">
+        UPDATE food_board SET deleted_yn = 'Y'
+        WHERE board_num = #{boardNum}
+    </delete>
+
+<!--    좋아요 추가 -->
+    <update id="likeUpdate" parameterType="com.bitc.java505_team4.dto.BoardDTO">
+        UPDATE food_board SET board_like = + 1 WHERE board_num = #{boardNum}
+    </update>
+</mapper>

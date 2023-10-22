@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>식품영양정보</title>
+    <!-- CSS only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <!-- JavaScript Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/css/food-css.css">
+    <style>
+        .btn-pagination {
+            background-color: white !important;
+            color: blue !important;
+            border: 1px solid blue !important;
+        }
+
+        .btn-pagination.active {
+            background-color: blue !important;
+            color: white !important;
+        }
+    </style>
+
+    <script>
+        $(document).ready(function () {
+            let currentPage = 1; // 현재 페이지 변수 추가
+            const pageSize = 10; // 페이지당 항목 수
+
+            function loadFoodData() {
+                const foodName = $("#foodName").val();
+                if (!foodName) {
+                    // 입력값이 없을 경우 "단어를 입력해 주세요" 메시지 출력
+                    $("#pageButtons > div").html("<p>단어를 입력해 주세요</p>");
+                    return;
+                }
+
+                const datas = {
+                    Page_No: currentPage,
+                    Page_Size: pageSize,
+                    fd_Nm: foodName,
+                };
+
+                $.ajax({
+                    url: "/foodUrl",
+                    type: "POST",
+                    data: datas,
+                    beforeSend: function () {
+                        // 스피너를 표시
+                        $("#spinner").show();
+                        $("#searchView").hide();
+                    },
+                    success: function (data) {
+                        const searchResult = $("#searchResult > div");
+                        searchResult.empty();
+
+                        if (data.itemList.length === 0) {
+                            // 데이터가 없는 경우 메시지 출력
+                            const noDataMessage = $("<p></p>")
+                                .addClass("text-muted")
+                                .text("데이터가 없습니다.");
+                            searchResult.append(noDataMessage);
+                        } else {
+                            for (let i = 0; i < data.itemList.length; i++) {
+                                let result = "";
+                                result += "<div class='d-flex justify-content-start mb-5'>";
+                                result +=
+                                    "<a class='text-decoration-none me-3 fdname fs-5 fw-bold text-dark'>" +
+                                    data.itemList[i].fd_Nm +
+                                    "</a>";
+                                result +=
+                                    "<p class='text-muted align-self-end'>대분류>" +
+                                    data.itemList[i].upper_Fd_Grupp_Nm +
+                                    ",     중분류>" +
+                                    data.itemList[i].fd_Grupp_Nm +
+                                    "</p>";
+                                result += "</div>";
+
+                                searchResult.append(result);
+                            }
+                        }
+                        onEvent();
+                        // 페이지 버튼 생성
+                        createPageButtons(data.totalPage);
+                    },
+                    error: function () {
+                        alert("Conn Err");
+                        let result = "";
+                        result += "<div class='d-flex justify-content-start mb-5'>";
+                        result +=
+                            "<p class='me-3 fdname fs-5 fw-bold text-dark'>검색에 실패하였습니다.</p>";
+                        result += "</div>";
+
+                        searchResult.append(result);
+                    },
+                    complete: function () {
+                        // 요청이 완료되면 스피너를 숨김
+                        $("#spinner").hide();
+                        $("#searchView").show();
+                    },
+                });
+            }
+
+            function createPageButtons(totalPages) {
+                const pageButtons = $("#pageButtons");
+                pageButtons.empty();
+
+                const maxButtons = 5; // 최대 표시할 페이지 버튼 수
+                const visiblePages = Math.min(maxButtons, totalPages); // 표시할 페이지 버튼 개수
+
+                let startPage = Math.max(1, currentPage - Math.floor(visiblePages / 2));
+                let endPage = Math.min(startPage + maxButtons - 1, totalPages);
+
+// 만약 endPage가 실제 데이터가 있는 마지막 페이지를 초과하면 조정
+                if (endPage > Math.ceil(totalPages / pageSize)) {
+                    endPage = Math.ceil(totalPages / pageSize);
+                }
+
+                // 데이터가 없는 페이지 버튼 제거
+                pageButtons.children().each(function () {
+                    const page = parseInt($(this).attr("data-page"));
+                    if (page > totalPages) {
+                        $(this).remove();
+                    }
+                });
+
+                // 이전 페이지 버튼 추가
+                if (currentPage > 1) {
+                    const previousButton = $("<button></button>")
+                        .addClass("btn btn-pagination mx-1")
+                        .attr("id", "previousPageButton")
+                        .attr("data-page", currentPage - 1)
+                        .text("<<");
+                    pageButtons.append(previousButton);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const button = $("<button></button>")
+                        .addClass("btn btn-pagination mx-1")
+                        .attr("data-page", i)
+                        .text(i);
+
+                    if (i === currentPage) {
+                        button.addClass("active");
+                    }
+
+                    pageButtons.append(button);
+                }
+
+                // 다음 페이지 버튼 추가
+                if (currentPage < totalPages && currentPage < endPage) {
+                    const nextButton = $("<button></button>")
+                        .addClass("btn btn-pagination mx-1")
+                        .attr("id", "nextPageButton")
+                        .attr("data-page", currentPage + 1)
+                        .text(">>");
+                    pageButtons.append(nextButton);
+                }
+            }
+
+            $("#search").on("click", function () {
+                currentPage = 1; // 검색 버튼 클릭 시 첫 번째 페이지로 초기화
+                loadFoodData();
+            });
+
+            // 페이지 버튼 클릭 이벤트 처리
+            $("#pageButtons").on("click", "button", function () {
+                currentPage = parseInt($(this).attr("data-page")); // 클릭한 페이지로 변수 업데이트
+                loadFoodData();
+            });
+        });
+
+        function onEvent() {
+            $(".fdname").on("click", function () {
+                // 영양성분 상세정보 창 가리기
+                $("#foodDetail").hide();
+                const tag = $(this);
+
+                const datas = {Page_No: 1, Page_Size: 10, fd_Nm: tag.text()}
+
+                $.ajax({
+                    url: "/foodUrl",
+                    type: "POST",
+                    data: datas,
+                    dataType: "json",
+                    beforeSend: function () {
+                        // 스피너를 표시
+                        $("#spinner2").show();
+                    },
+                    success: function (data) {
+                        const tbody = $("#table > tbody")
+
+                        tbody.empty();
+
+                            for (let i = 0; i < data.itemList.length; i++) {
+                            let body = "";
+                            body += "<tr>";
+                                body += "<td>" + data.itemList[i].fd_Nm + "</td>";
+                                body += "<td>" + data.itemList[i].fd_Wgh + "</td>";
+                            body += "</tr>";
+
+                            tbody.append(body);
+                        }
+
+                        const tag_span = "<span class='fcname' style='display: none;'>" + data.itemList[0].fd_Code + "</span>";
+                        tbody.append(tag_span);
+                        searchInfo();
+                    },
+                    error: function () {
+                        alert("Conn Err2")
+                    },
+                    complete : function () {
+                        $("#spinner2").hide();
+                    }
+                })
+            });
+        }
+
+        function searchInfo() {
+            $("#info").on("click", function () {
+                const fcName = $(".fcname").text();
+
+                const datas = {foodCd: fcName}
+
+                $.ajax({
+                    url: "/foodUrl3",
+                    type: "POST",
+                    data: datas,
+                    beforeSend: function () {
+                        // 스피너를 표시
+                        $("#spinner3").show();
+                        // $("#foodDetail").hide();
+                    },
+                    success: function (data) {
+                        const tbody2 = $("#infoTable > tbody")
+
+                        tbody2.empty();
+
+                        for (let i = 0; i < data.length; i++) {
+                            let body2 = "";
+                            body2 += "<tr>";
+                            body2 += "<td>" + data[i].food_Name + "</td>";
+                            body2 += "<td>" + data[i].food_Weight + "</td>";
+                            body2 += "<td>" + data[i].energy_Qy + "</td>";
+                            body2 += "<td>" + data[i].carbohydrate_Qy + "</td>";
+                            body2 += "<td>" + data[i].prot_Qy + "</td>";
+                            body2 += "<td>" + data[i].fafref_Qy + "</td>";
+                            body2 += "</tr>";
+
+                            tbody2.append(body2);
+                        }
+                    },
+                    complete: function () {
+                        $("#spinner3").hide();
+                        $("#foodDetail").show();
+                    }
+                });
+            });
+        }
+    </script>
+</head>
+<body>
+<header th:replace="~{layout/header :: header-basic}"></header>
+
+<main>
+    <div class="container my-4">
+        <div class="row border-bottom">
+            <div class="col-sm-8 mx-auto">
+                <h3 class="my-5">식품영양정보</h3>
+                <div class="row mb-5">
+                    <div class="col-sm-9">
+                        <input class="form-control me-2" id="foodName" name="foodName" type="text"
+                               placeholder="음식명을 작성해주세요.">
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="d-grid gap-3">
+                            <button class="btn btn-outline-success" type="submit" id="search">Search</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--        로딩 스피너-->
+        <div class="d-flex justify-content-center mt-3">
+            <div class="spinner-border text-primary" id="spinner" style="display: none;">
+                <span class="visually-hidden">검색중입니다</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 식품영양정보 상세보기 모달창 -->
+    <div>
+        <div class="modal fade" id="foodModal" tabindex="-1" aria-labelledby="foodModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="foodModalLabel">식품영양정보</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!--        로딩 스피너-->
+                        <div class="d-flex justify-content-center mt-3">
+                            <div class="spinner-border text-primary" id="spinner2" style="display: none;">
+                                <span class="visually-hidden">검색중입니다</span>
+                            </div>
+                        </div>
+                        <!--식품영양정보, 테이블로 정보 입력-->
+                        <table class="table border-0" id="table">
+                            <thead>
+                            <tr>
+                                <th>재료명</th>
+                                <th>재료중량</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                        <div class="d-grid gap-3 mt-3">
+                            <button class="btn btn-outline-success" type="button" id="info">영양성분 상세정보
+                            </button>
+                        </div>
+                        <!--        로딩 스피너-->
+                        <div class="d-flex justify-content-center mt-3">
+                            <div class="spinner-border text-primary" id="spinner3" style="display: none;">
+                                <span class="visually-hidden">검색중입니다</span>
+                            </div>
+                        </div>
+                        <!-- 영양성분 상세정보 -->
+                        <div class="border-top my-4" id="foodDetail" style="display: none;">
+                            <h5 class="mt-4">영양성분 상세정보</h5>
+                            <table class="table border-0" id="infoTable">
+                                <thead>
+                                <tr>
+                                    <th>식품명</th>
+                                    <th>중량</th>
+                                    <th>열량(kcal)</th>
+                                    <th>탄수화물</th>
+                                    <th>단백질</th>
+                                    <th>지방</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <h6 class="text-muted fw-bold">단위는 g(그램)입니다.</h6>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <p class="text-muted" style="font-size: 75%;">출처 : 국립농원과학원</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 검색결과-->
+    <div id="searchView" style="display: none;">
+        <div class="row">
+            <div class="col-sm-6 mx-auto">
+                <div id="searchResult">
+                    <p class="mb-5 fs-5 text-muted">검색결과</p>
+                    <!--                    실제 검색결과를 띄우는 div-->
+                    <div></div>
+                    <!-- 페이지 버튼을 추가할 영역 -->
+                    <div id="pageButtons" class="text-center mt-3"></div>
+                    <!--                    <div class="d-flex justify-content-start mb-5"></div>-->
+                </div>
+                <div class="my-5 d-grid mb-5 col-sm-8 mx-auto">
+                    <button type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal"
+                            data-bs-target="#foodModal">
+                        식품영양정보
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout/footer :: footer-basic}"></footer>
+</body>
+</html>

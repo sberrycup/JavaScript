@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bitc.java505_team4.mapper.CommentMapper">
+    <select id="selectCommentList" parameterType="com.bitc.java505_team4.dto.CommentDTO" resultType="com.bitc.java505_team4.dto.CommentDTO">
+        SELECT comment_num, comment_memberName, comment_contents, comment_date FROM food_comment WHERE comment_boardNum = #{commentBoardNum} ORDER BY comment_num DESC
+    </select>
+
+<!--    댓글 등록 -->
+    <insert id="insertComment" parameterType="com.bitc.java505_team4.dto.CommentDTO">
+        INSERT INTO food_comment (comment_memberName, comment_contents, comment_date, comment_boardNum) VALUES (#{commentMemberName}, #{commentContents}, NOW(), #{commentBoardNum});
+    </insert>
+
+<!--    댓글 삭제-->
+    <delete id="deleteComment" parameterType="int">
+        DELETE FROM food_comment WHERE comment_boardNum = #{commentBoardNum} AND comment_num = #{commentNum};
+    </delete>
+
+<!--    댓글 수정-->
+    <update id="updateComment" parameterType="com.bitc.java505_team4.dto.CommentDTO">
+        UPDATE food_comment SET comment_contents = #{commentContents}, comment_date = NOW() WHERE comment_num = #{commentNum} AND comment_boardNum = #{commentBoardNum};
+    </update>
+</mapper>

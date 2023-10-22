@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>월별 추천 식재료</title>
+    <link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" rel="stylesheet">
+    <script crossorigin="anonymous"
+            integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="/css/food-css.css">
+
+    <script>
+        $(document).ready(function () {
+            // 초기화 버튼
+            $('#btn-reset').on("click", function () {
+                location.href = "/foodMonths.do";
+            })
+
+            // 검색 버튼, 검색은 2가지 방법이 있음(월만 입력, 검색어만 입력)
+            $('#btn-search').on("click", function () {
+                const foodName = $('#foodName').val();
+                const month = $('#select-months').val();
+
+                $.ajax({
+                    url: "/foodMonths.do",
+                    type: 'POST',
+                    data: {fd_Nm: foodName, foodMMonth: month, Page_No: 1, Page_Size: 5},
+                    beforeSend: function () {
+                        $('#spinner').show();
+                    },
+                    success: function (data) {
+
+                        // Map 방식으로 받아서 데이터를 받아옴
+                        const foodAPIList = data.foodAPIList;
+                        const foodDBList = data.foodDBList;
+
+                        // 레시피 중복 확인을 위한 리스트
+                        let confirmDu = new Array();
+                        var dulplicationConfirm = false;
+
+
+                        // 검색 했을 때 이미 전에 검색했던 것 삭제
+                        const p = $('#btn-result > #searchResult');
+                        p.empty();
+
+                        const p1 = $("#btn-recipeResult > p");
+                        p1.empty();
+
+                        const p2 = $('#recipeTitle > h1');
+                        p2.empty();
+
+                        let tag = "";
+
+                        // 방법 1. 검색어가 없을 때(foodName == '')
+                        if (foodName == '') {
+                            // tag += "<h1>" + month + "의 식재료</h1>"
+                            tag += '<p class="my-5 fs-5 text-black-50"><strong>' + month + '</strong>의 식재료</p>';
+                        } else {
+                            // tag += "<h1>'" + foodName + "'의 식재료 검색 결과</h1>"
+                            tag += '<p class="my-5 fs-5 text-black-50"><strong>' + foodName + '</strong>의 식재료 검색 결과</p>';
+                        }
+
+                        for (let i = 0; i < foodDBList.length; i++) {
+                            // foodDBList의 db를 검색하는 리스트에 month값을 받아온게 없으면
+                            if (foodDBList[i].foodMMonth == null) {
+                                // tag += "<p>" + foodDBList[i].foodMName + "</p>";
+                                tag += '<div class="d-flex justify-content-start mb-5">';
+                                tag += '<h4 class="me-3 fw-semibold">' + foodDBList[i].foodMName + '</h4>';
+                                tag += '</div>';
+                            } else {
+                                // tag += "<p>" + "<span>[" + foodDBList[i].foodMMonth + "]</span>" + foodDBList[i].foodMName + "</p>";
+                                tag += '<div class="d-flex justify-content-start mb-5">';
+                                tag += '<h4 class="me-3 fw-semibold"><span>[' + foodDBList[i].foodMMonth + ']</spap>' + foodDBList[i].foodMName + '</h4>';
+                                tag += '</div>';
+                            }
+                        }
+
+                        if (foodName == '') {
+                            // tag += "<h1>" + month + "의 레시피</h1>"
+                            tag += '<p class="my-5 fs-5 text-black-50"><strong>' + month + '</strong>의 레시피</p>';
+                        } else {
+                            // tag += "<h1>'" + foodName + "'의 레시피 검색 결과</h1>"
+                            tag += '<p class="my-5 fs-5 text-black-50"><strong>' + foodName + '</strong>의 레시피 검색 결과</p>';
+                        }
+                        ``
+
+                        // 여라가지 재료가 나왔을 경우 재료의 모든 레시피를 가져오기 위해서 이중 리스트 사용
+                        // 이중 리스트는 [][]으로 표현, 2차원 배열 같은 것으로 인식
+                        for (let i = 0; i < foodAPIList.length; i++) {
+                            if (foodAPIList[i] != null) {
+                                for (let j = 0; j < foodAPIList[i].length; j++) {
+                                    for (let k = 0; k < confirmDu.length; k++) {
+                                        if (foodAPIList[i][j].fd_Code == confirmDu[k]) {
+                                            dulplicationConfirm = true;
+                                        }
+                                    }
+                                    if (dulplicationConfirm == false) {
+                                        // tag += "<p><a class='info' th:value='${foodName}'>" + foodAPIList[i][j].ckry_Nm + "</a></p>";
+                                        // tag += "<p><a class='info'>" + foodAPIList[i][j].fd_Nm + "</a></p>";
+                                        tag += '<div class="d-flex justify-content-start mb-5">';
+                                        tag += '<a class="fs-4 text-decoration-none info" data-bs-toggle="modal" data-bs-target="#foodModal">' + foodAPIList[i][j].fd_Nm + '</a>';
+                                        tag += '</div>';
+                                        confirmDu.push(foodAPIList[i][j].fd_Code);
+                                    }
+                                    dulplicationConfirm = false;
+                                }
+                            }
+                        }
+
+                        p.append(tag);
+
+                        // 레시피를 클릭했을 때
+                        onRecipeEvent();
+                        $('#spinner').hide();
+                    },
+                    error: function () {
+                        alert("서버와 통신 중 오류가 발생했습니다.");
+                    },
+                    finally : function () {
+                        $('#spinner').hide();
+                    }
+                });
+            });
+        });
+
+        function onRecipeEvent() {
+            $(".info").on("click", function () {
+                const foodName = $(this);
+
+                // 같은 주소를 불러오므로 같은 data를 매개변수로 사용한다.
+                $.ajax({
+                    url: "/foodMonths.do",
+                    type: 'POST',
+                    data: {fd_Nm: foodName.text(), foodMMonth: '1월', Page_No: 1, Page_Size: 5},
+                    beforeSend : function () {
+                        $('spinner2').show();
+                    },
+                    success: function (data) {
+
+                        const foodAPIList = data.foodAPIList;
+
+                        const p1 = $("#btn-recipeResult > p")
+                        p1.empty();
+
+                        const p2 = $('#recipeTitle > h1');
+                        p2.empty();
+
+
+                        let pRecipe = "";
+                        let pTitle = '';
+
+                        if (foodAPIList[0] != null) {
+
+                            pTitle += '<h1 class="modal-title fs-5" id="foodModalLabel">'+ foodAPIList[0][0].fd_Nm +' 조리 방법</h1>'
+                            pRecipe += "<p><strong>" + foodAPIList[0][0].ckry_Sumry_Info + "</strong></p>";
+                            pRecipe += "<p><strong>재료 : </strong></p>";
+
+
+
+                            for (let i = 0; i < (foodAPIList[0][0].foodList.foodList).length; i++) {
+                                if (i == 0) {
+                                    // pRecipe += "<p> (" + foodAPIList[0][0].foodList.foodList[i].food_Nm + ")</p>";
+                                    pRecipe += "<p>" + foodAPIList[0][0].foodList.foodList[i].food_Nm + "</p>";
+                                } else {
+                                    pRecipe += "<p> " + foodAPIList[0][0].foodList.foodList[i].food_Nm + "</p>";
+                                }
+                            }
+                        }
+
+                        p1.append(pRecipe);
+                        p2.append(pTitle);
+                    },
+                    error: function () {
+                        alert("서버와 통신 중 오류가 발생했습니다.");
+                    },
+                    finally: function () {
+                        $('#spinner2').hide()
+                    }
+                })
+            });
+        }
+    </script>
+</head>
+<body>
+
+<header th:replace="~{layout/header :: header-basic}"></header>
+
+<div class="container my-4">
+
+    <div class="row border-bottom">
+        <div class="col-sm-8 mx-auto">
+            <h3 class="my-5">월별 추천 식단</h3>
+            <div class="row mb-5">
+                <div class="col-sm-3">
+                    <select class="form-select" id="select-months">
+                        <option th:value="'1월'">1월</option>
+                        <option th:value="'2월'">2월</option>
+                        <option th:value="'3월'">3월</option>
+                        <option th:value="'4월'">4월</option>
+                        <option th:value="'5월'">5월</option>
+                        <option th:value="'6월'">6월</option>
+                        <option th:value="'7월'">7월</option>
+                        <option th:value="'8월'">8월</option>
+                        <option th:value="'9월'">9월</option>
+                        <option th:value="'10월'">10월</option>
+                        <option th:value="'11월'">11월</option>
+                        <option th:value="'12월'">12월</option>
+                    </select>
+                </div>
+                <div class="col-sm-5">
+                    <input class="form-control me-2" type="text" placeholder="식재료 및 레시피를 검색해주세요." id="foodName"
+                           name="foodName">
+                </div>
+                <div class="col-sm-2">
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-outline-success" type="submit" id="btn-search">Search</button>
+                    </div>
+                </div>
+                <div class="col-sm-2">
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-outline-danger" type="reset" id="btn-reset">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="col-sm-7 mx-auto">
+        <div id="btn-result">
+            <div class="d-flex justify-content-center my-3" style="display: none">
+                <div class="spinner-border text-primary" id="spinner" style="display: none;">
+                    <span class="visually-hidden">검색중입니다</span>
+                </div>
+            </div>
+            <div id="searchResult"></div>
+        </div>
+        <div>
+            <div class="modal fade" id="foodModal" tabindex="-1" aria-labelledby="foodModalLabel"
+                 aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div id="recipeTitle">
+                                <h1 class="modal-title fs-5" id="foodModalLabel"></h1>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="btn-recipeResult">
+                                <div class="d-flex justify-content-center mt-3" style="display: none;">
+                                    <div class="spinner-border text-primary" id="spinner2" style="display: none;">
+                                        <span class="visually-hidden">검색중입니다</span>
+                                    </div>
+                                </div>
+                                <!--식품영양정보, 테이블로 정보 입력-->
+                                <p>녹두는 물을 붓고 삶은 다음 물을 부으면서 체에 내린다. 껍질은 버리고 체에 내린 물을 그대로 가라앉혀 윗물과 앙금을 각각 분리해 둔다. 쌀은
+                                    씻어서
+                                    2시간 이상 물에 불린 다음 채반에 건져 물기를 빼놓는다. 냄비에 불린 쌀과 1)의 윗물만 붓고 끓인다. 죽이 다 쑤어지면 나머지 앙금을 넣고
+                                    한 번
+                                    더 끓인다. 소금으로 간을 한다.</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<footer th:replace="~{layout/footer :: footer-basic}"></footer>
+</body>
+</html>

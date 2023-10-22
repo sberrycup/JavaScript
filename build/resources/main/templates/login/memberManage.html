@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" rel="stylesheet">
+    <script crossorigin="anonymous"
+            integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <style>
+
+    </style>
+
+    <script>
+        $(document).ready(function () {
+            $("#btn-list").on('click',function (){
+                location.href = "/main/";
+                // history.back();
+            });
+
+            // 반복문을 쓰면 id 값은 하나여야 돼서 불러오지 못함, 그래서 class로 값을 가져온다.
+            // memberNum을 가져오기 위해서는 실행한 위치에서 목표까지의 위치에서의 값을 가져와야해서 그 위치까지 이동함
+
+            $(".btn-delete").on("click", function () {
+                const parentTr = $(this).parent().parent(); //tr
+                const memberNum = parentTr.children(".memberNum").text(); //memberNum의에서의 값, val은 input태그만 사용
+                $("#method").val("DELETE"); // tr밖에 있어서 위에 처럼 위치 설정 안해도 됨
+                const frm = $("#frm")[0];
+                frm.action = "/login/" + memberNum;
+                frm.submit();
+            });
+
+            $(".btn-update").on("click", function () {
+                const parentTr = $(this).parent().parent(); //tr
+                const memberNum = parentTr.children(".memberNum").text(); //memberNum의에서의 값, val은 input태그만 사용
+                // const adminYn = parentTr.children(".adminYn").text();
+                const adminYn = parentTr.children(".adminYn").children().val();
+                $("#method").val("PUT"); // tr밖에 있어서 위에 처럼 위치 설정 안해도 됨
+                const frm = $("#frm")[0];
+                frm.action = "/login/" + memberNum + "/" + adminYn;
+                frm.submit();
+            });
+        });
+    </script>
+</head>
+<body>
+<main class="container my-4">
+    <h1 class="text-center"><span th:text="${userinfo}"></span>님의 관리자 페이지</h1>
+    <table class="table table-hover table-striped text-center">
+        <colgroup>
+            <col style="width: 5%"/>
+            <col style="width: 25%"/>
+            <col style="width: 20%"/>
+            <col style="width: 25%"/>
+            <col style="width: 25%"/>
+        </colgroup>
+        <thead>
+        <tr>
+            <th>번호</th>
+            <th>아이디</th>
+            <th>이름</th>
+            <th>회원 직책</th>
+            <th>회원 관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <form id="frm" method="POST">
+            <tr style="vertical-align: middle;" th:each="item : ${userList}" th:if="${#lists.size(userList)} > 0">
+                <td class="memberNum" th:text="${item.memberNum}">1</td>
+                <td th:text="${item.memberEmail}">아이디</td>
+                <td th:text="${item.memberName}">이름</td>
+<!-- 테스트로 함-->
+<!--                <td class="adminYn" th:text="${item.adminYn}">-->
+<!--                <td class="adminYn" th:text="${item.adminYn}">a <input type="text" name="adminYn" th:value="${item.adminYn}">-->
+                <td class="adminYn">
+                    <select class="form-select form-select-sm" name="adminYn" th:value="${item.adminYn}">
+<!--            th:if="${item.adminYn.equals('n')}"    -->
+                        <option th:value="'n'" >가입자</option>
+                        <option th:value="'f'" th:selected="${item.adminYn.equals('f')}">중간 관리자</option>
+                    </select>
+                </td>
+                <td>
+                    <!--                수정,삭제 method를 사용하기가 애매함, id의 값이 계속 달라지는거라서 넣기가 애매함 -->
+                    <!--                <button type="submit" class="btn btn-primary" id="userDelete">삭제</button>-->
+                    <!--                        <a href="/login/" th:attrappend="href=${item.memberNum}" class="btn btn-primary">수정</a>-->
+                    <!-- 이 삭제 방식으로는 되지만 method를 GET으로 줘야해서 수정이랑 같이 사용하기 애매함 -->
+<!--                                            <a href="/login/" th:attrappend="href=${item.memberNum}" class="btn btn-primary">삭제</a>-->
+                    <button class="btn btn-primary btn-update" type="button">수정</button>
+                    <button class="btn btn-primary btn-delete" type="button">삭제</button>
+                </td>
+            </tr>
+            <tr th:unless="${#lists.size(userList)} > 0">
+                <td colspan="5">가입자가 없습니다</td>
+            </tr>
+            <input id="method" name="_method" type="hidden">
+        </form>
+        </tbody>
+    </table>
+    <div class="d-flex justify-content-end">
+        <button class="btn btn-primary" id="btn-list">목록</button>
+    </div>
+</main>
+</body>
+</html>

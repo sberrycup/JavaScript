@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+            crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+    <!--    인피니티 스크롤 CDN-->
+    <script src="//unpkg.com/jscroll/dist/jquery.jscroll.min.js"></script>
+
+    <link rel="stylesheet" href="/css/food-css.css">
+
+    <style>
+        .heart {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-image: url('/imgSource/emptyheart.png'); /* 빈 하트 이미지 경로 */
+            background-size: cover;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+
+        .clicked {
+            background-image: url('/imgSource/fillheart.png'); /* 꽉 찬 하트 이미지 경로 */
+        }
+    </style>
+
+
+    <script>
+        var totalRows;
+
+        function getTotalRows() {
+            $.ajax({
+                url: '/main/getTotalRows',
+                type: 'GET',
+                success: function (response) {
+                    totalRows = response; // 서버에서 받은 값 할당
+                    // 이후 필요한 작업 수행
+                },
+                error: function (xhr, status, error) {
+                    console.error(error); // 에러 처리
+                }
+            });
+
+            //     인피니티 스크롤
+            var isLoading = false; // 데이터를 불러오는 중인지 확인하기 위한 변수
+            var limit = 10; // 한 번에 불러올 데이터의 개수
+            var offset = 0; // 데이터를 불러올 시작 위치
+            // 스크롤 이벤트 핸들러
+            $(window).scroll(function () {
+
+                // 이미 데이터를 불러오는 중인 경우 또는 모든 데이터를 이미 불러온 경우 종료
+                if (isLoading || offset >= totalRows) {
+                    return;
+                }
+
+                // 스크롤 위치와 창의 높이 계산
+                var documentHeight = $(document).height();
+                var scrollTop = $(window).scrollTop();
+                var windowHeight = $(window).height();
+
+
+                // 스크롤이 맨 아래에 도달했는지 확인
+                if (scrollTop + windowHeight >= documentHeight) {
+                    // 데이터를 불러오는 중으로 표시
+                    isLoading = true;
+
+                    // AJAX 요청
+                    $.ajax({
+                        url: '/main/process',
+                        type: 'POST',
+                        data: {limit: limit, offset: offset},
+                        success: function (response) {
+                            // 데이터를 성공적으로 받아왔을 때 처리
+                            // 받아온 데이터를 페이지에 추가하는 등의 작업을 수행
+
+                            // 게시글 목록 추출
+                            const boardList = JSON.parse(response);
+
+
+                            // HTML 생성
+                            var html = '';
+                            for (var i = 0; i < boardList.length; i++) {
+                                var board = boardList[i];
+                                html += '<div class="container my-6 border-bottom " data-board-id="' + board.boardNum + '">';
+                                html += '   <div class="row">';
+                                html += '       <div class="col-sm-8 mx-auto mt-4 border-bottom">';
+                                html += '           <form method="post" >';
+                                html += '               <input type="hidden" class="form-control boardNum" name="boardNum" readonly value="' + board.boardNum + '">';
+                                html += '               <div class="row">';
+                                html += '                   <div class="col-sm">';
+                                html += '                       <div class="d-flex justify-content-between">';//추가
+                                html += '                           <div class="d-flex">';
+                                html += '                               <div class="profile rounded-circle me-3 align-self-center">';
+                                html += '                                   <img src="/profilePhoto/defaultprofilephoto.png" class="img-fluid rounded-circle">';// 추가
+                                html += '                               </div>';
+                                html += '                               <p class="align-self-center">' + board.boardMemberName + '</p>';
+                                html += '                           </div>';
+                                html += '                           <div class="dropdown">';//추가
+                                html += '                               <div class="write-icon" data-bs-toggle="dropdown" aria-expanded="false">';
+                                html += '                                   <img src="/imgSource/more.png" class="img-fluid">';
+                                html += '                               </div>';
+                                html += '                               <ul class="dropdown-menu">';
+                                html += '                                   <li><button class="dropdown-item btn updateBtn">수정</button></li>';
+                                html += '                                   <li><button class="dropdown-item btn deleteBtn">삭제</button></li>';
+                                html += '                                   <li><button class="dropdown-item btn submitBtn" style="display: none;" readonly>저장</button></li>';
+                                html += '                               </ul>';
+                                html += '                           </div>';
+                                html += '                       </div>';
+                                html += '                   </div>';
+                                // 내용
+                                html += '                   <div class="row my-3">';
+                                html += '                       <div class="col-sm input-group">';
+                                html += '                           <textarea readonly class="form-control border-0 align-self-start boardContents" rows="5">' + board.boardContents + '</textarea>';
+                                html += '                       </div>';
+                                html += '                   </div>';
+                                //사진
+                                if (board.boardFile != null) {
+                                    html += '                   <div class="row my-3">';
+                                    html += '                       <div class="col-sm d-flex">';
+                                    html += '                           <div class="board-image img-thumbnail justify-content-center"><img src="' + board.boardFile + '"></div>';
+                                    html += '                       </div>';
+                                    html += '                   </div>';
+                                }
+                                // 아이콘
+                                html += '                   <div class="row my-4">';
+                                html += '                       <div class="col-sm d-flex justify-content-between">';
+                                //댓글
+                                html += '                           <div class="write-icon commentBtn" id="commentBtn"><img src="/imgSource/commenticon.png" class="img-fluid"></div>';
+                                //좋아요
+                                html += '                           <div class="write-icon"><span class="heart"></span></div>';
+                                //퍼가기
+                                html += '                           <div class="dropdown">';
+                                html += '                               <div class="write-icon" data-bs-toggle="dropdown" aria-expanded="false">';
+                                html += '                                   <img src="/imgSource/share.png" class="img-fluid">';
+                                html += '                               </div>';
+                                html += '                               <ul class="dropdown-menu">';
+                                html += '                                   <li><a class="dropdown-item">링크복사</a></li>'
+                                html += '                               </ul>';
+                                html += '                           </div>';
+                                html += '                       </div>';
+                                html += '                   </div>';
+                                html += '                       <div class="container my-6 border-bottom commentBox" id="commentBox" style="display: none;">';
+                                html += '                           <div class="row commentRow">';
+                                html += '                               <div class="col-sm-8 mx-auto mt-4 border-bottom">';
+                                html += '                                   <form method="post" class="ms-5">';
+                                html += '                                       <div class="row">';
+                                html += '                                           <div class="col-sm">';
+                                html += '                                               <div class="d-flex">';
+                                html += '                                                   <div class="profile rounded-circle me-3 align-self-center"><img src="/profilePhoto/defaultprofilephoto.png" class="img-fluid rounded-circle"> </div>';
+                                html += '                                                   <p class="align-self-center">노력했습니다</p>';
+                                html += '                                               </div>';
+                                html += '                                           </div>';
+                                html += '                                           <div class="row my-3">';
+                                html += '                                               <div class="col-sm">';
+                                html += '                                                   <textarea class="form-control border-0 align-self-start commentContents" name="commentContents" type="text" rows="3" placeholder="댓글을 작성해주세요."></textarea>';
+                                html += '                                               </div>';
+                                html += '                                           </div>';
+                                html += '                                           <div class="row my-4">';
+                                html += '                                               <div class="col-sm">';
+                                html += '                                                   <div class="d-flex justify-content-end">';
+                                html += '                                                       <button type="button" class="btn btn-primary rounded-pill btn-insertComment">댓글쓰기</button>';
+                                html += '                                                   </div>';
+                                html += '                                               </div>';
+                                html += '                                           </div>';
+                                html += '                                       </div>';
+                                html += '                                   </form>';
+                                html += '                               </div>';
+                                html += '                           </div>';
+                                html += '                           <div class="commentScroll">';
+                                for (var j = 0; j <  board.commentList.length; j++) {
+                                    var comment = board.commentList[j];
+                                    var commentNum = comment.commentNum;
+                                    html += '<form method="post" class="commentContainer" data-comment-id="' + commentNum + '">';
+                                    html += '    <input type="hidden" class="form-control commentBoardNum" name="commentBoardNum" readonly value="' + board.boardNum + '">';
+                                    html += '    <div class="row">';
+                                    html += '        <div class="col-sm">';
+                                    html += '           <div class="d-flex justify-content-between">';
+                                    html += '               <div class="d-flex input-group">';
+                                    html += '                   <div class="profile rounded-circle me-3 align-self-center"><img src="/profilePhoto/defaultprofilephoto.png" class="img-fluid rounded-circle"> </div>';
+                                    html += '                   <p class="align-self-center">' + comment.commentMemberName + '</p>';
+                                    html += '                   <input type="hidden" class="form-control" name="commentMemberName" id="commentMemberName" value="' + comment.commentMemberName + '">';
+                                    html += '               </div>';
+                                    html += '               <div class="dropdown">';
+                                    html += '                   <div class="write-icon" data-bs-toggle="dropdown" aria-expanded="false">';
+                                    html += '                       <img src="/imgSource/more.png" class="img-fluid">';
+                                    html += '                   </div>';
+                                    html += '                   <ul class="dropdown-menu">';
+                                    html += '                       <li><button class="dropdown-item btn commentUpdateBtn">수정</button></li>';
+                                    html += '                       <li><button class="dropdown-item btn commentDeleteBtn">삭제</button></li>';
+                                    html += '                       <li><button class="dropdown-item btn commentSubmitBtn" style="display: none;" readonly>저장</button></li>';
+                                    html += '                   </ul>';
+                                    html += '               </div>';
+                                    html += '           </div>';
+                                    html += '        </div>';
+                                    html += '        <div class="row my-3">';
+                                    html += '            <div class="col-sm input-group">';
+                                    html += '                <textarea readonly class="form-control border-0 align-self-start commentContents2" rows="5">' + comment.commentContents + '</textarea>';
+                                    html += '            </div>';
+                                    html += '        </div>';
+                                    html += '    </div>';
+                                    html += '</form>';
+                                }
+                                html += '                   </div>';
+                                html += '                 </div>';
+                                html += '             </div>';
+                                html += '           </form>';
+                                html += '           </div>';
+                                html += '       </div>';
+                                html += '   </div>';
+                                html += '</div>';
+                            }
+                            $('.mainList').empty();
+                            // 생성된 HTML을 페이지에 추가
+                            $('.mainList').append(html);
+
+                            // offset 값 업데이트
+                            offset += limit;
+
+                            // 데이터 로딩 완료
+                            isLoading = false;
+                        },
+
+                        error: function (error) {
+                            // 데이터를 받아오지 못했을 때 처리
+                            // 에러 핸들링 등을 수행
+                            alert("에러발생")
+                            console.error(error);
+                            // 데이터 로딩 완료
+                            isLoading = false;
+                        }
+                    });
+                }
+            });
+        }
+        getTotalRows();
+
+        // // 페이지 로드 시 초기 readonly 상태 설정
+        window.addEventListener('DOMContentLoaded', function () {
+            var forms = document.querySelectorAll('form[id^="frm2"]');
+
+            forms.forEach(function (form) {
+                var textarea = form.querySelector('textarea');
+                textarea.setAttribute('readonly', 'readonly');
+            });
+        });
+
+        // 게시글 삭제
+        $(document).on("click", ".deleteBtn", function () {
+            var boardContainer = $(this).closest(".container"); // 삭제 버튼이 속한 게시물 컨테이너 요소를 찾음
+
+            var boardId = boardContainer.data("board-id"); // 게시물 컨테이너의 식별자 (게시물 ID) 추출
+
+            $.ajax({
+                url: "/main/delete",
+                type: "POST",
+                data: { boardNum: boardId }, // 게시물 ID 전송
+                success: function () {
+                    boardContainer.remove(); // 해당 게시물 컨테이너 삭제
+                },
+                error: function () {
+                    alert("delete 통신 오류");
+                }
+            });
+        });
+
+        // 게시글 수정
+        $(document).on("click", ".submitBtn", function () {
+            //  게시글 수정 버튼 클릭시 ajax 통신
+            const val2 = $(this).parent().parent().parent().find(".boardNum").val();
+            const val3 = $(this).parent().parent().find("textarea.boardContents").val();
+
+            $.ajax({
+                url: "/main/update",
+                type: "POST",
+                data: {boardNum: val2, boardContents: val3},
+                success: function (data) {
+                    location.reload();
+                },
+                error: function () {
+                    alert("update 통신 오류");
+                }
+            })
+        });
+
+        // 댓글창 슬라이드
+        $(document).on("click", ".commentBtn", function () {
+            const commentBox = $(this).parent().parent().parent().find(".commentBox");
+            commentBox.slideToggle();
+        });
+
+        $(document).on("click", ".heart", function () {
+            const heart = $(this).parent().parent().parent().find(".heart");
+            heart.toggleClass('clicked');
+        });
+
+        // 게시글 수정
+        $(document).on("click", ".updateBtn", function () {
+            // 페이지 접속 시 게시글 전체 readonly, 수정 시 해당 게시글 readonly 해제
+            const parentForm = $(this).parent().parent();
+
+            const textarea = parentForm.find("textarea");
+            const deleteBtn = parentForm.find(".deleteBtn");
+            const updateBtn = parentForm.find(".updateBtn");
+            const submitBtn = parentForm.find(".submitBtn");
+
+            if (textarea.attr("readonly") == "readonly") {
+                textarea.removeAttr("readonly");
+                deleteBtn.removeClass("save-mode");
+                updateBtn.text("취소");
+                submitBtn.show();
+            } else {
+                textarea.attr('readonly', true);
+                deleteBtn.addClass("save-mode");
+                updateBtn.text("수정");
+                submitBtn.hide();
+            }
+        });
+
+        // 댓글 작성
+        $(document).on("click", ".btn-insertComment", function () {
+            const clickedButton = $(this); // 클릭된 버튼을 변수에 저장
+
+            const commentContainer1 = $(this).closest(".commentBox").find(".commentScroll"); // 업데이트할 컨테이너1
+            const commentContainer2 = $(this).closest(".commentBox").find(".commentRow"); // 업데이트할 컨테이너2
+            const commentBoardNum = $(this).parent().parent().parent().parent().parent().parent().parent().parent().parent().find(".boardNum").val(); // 댓글이 속한 게시물 번호 추출
+            const comment = $(this).closest(".container").find("textarea.commentContents").val(); // 작성한 댓글 내용 추출
+
+            $.ajax({
+                url: "/main/insertComment",
+                type: "POST",
+                data:{ comment: comment, commentBoardNum: commentBoardNum },
+                success: function (data) {
+                    let html1 = '';
+                    html1 += '                               <div class="col-sm-8 mx-auto mt-4 border-bottom">';
+                    html1 += '                                   <form method="post" class="ms-5">';
+                    html1 += '                                       <div class="row">';
+                    html1 += '                                           <div class="col-sm">';
+                    html1 += '                                               <div class="d-flex">';
+                    html1 += '                                                   <div class="profile rounded-circle me-3 align-self-center"><img th:src="${userInfo.memberProfilePath}" class="img-fluid rounded-circle"> </div>';
+                    html1 += '                                                   <p class="align-self-center" th:value="${userInfo.memberName}"></p>';
+                    html1 += '                                               </div>';
+                    html1 += '                                           </div>';
+                    html1 += '                                           <div class="row my-3">';
+                    html1 += '                                               <div class="col-sm">';
+                    html1 += '                                                   <textarea class="form-control border-0 align-self-start commentContents" name="commentContents" type="text" rows="3" placeholder="댓글을 작성해주세요."></textarea>';
+                    html1 += '                                               </div>';
+                    html1 += '                                           </div>';
+                    html1 += '                                           <div class="row my-4">';
+                    html1 += '                                               <div class="col-sm">';
+                    html1 += '                                                   <div class="d-flex justify-content-end">';
+                    html1 += '                                                       <button type="button" class="btn btn-primary rounded-pill btn-insertComment">댓글쓰기</button>';
+                    html1 += '                                                   </div>';
+                    html1 += '                                               </div>';
+                    html1 += '                                           </div>';
+                    html1 += '                                       </div>';
+                    html1 += '                                   </form>';
+                    html1 += '                               </div>';
+
+
+                    let html2 = '';
+
+                    html2 += '<form method="post">';
+                    html2 += '    <input type="hidden" class="form-control commentBoardNum" name="commentBoardNum" readonly value="' + commentBoardNum + '">';
+                    html2 += '    <div class="row">';
+                    html2 += '        <div class="col-sm">';
+                    html2 += '           <div class="d-flex justify-content-between">';
+                    html2 += '               <div class="d-flex input-group">';
+                    html2 += '                   <div class="profile rounded-circle me-3 align-self-center"><img src="/profilePhoto/defaultprofilephoto.png" class="img-fluid rounded-circle"> </div>';
+                    html2 += '                   <p class="align-self-center">' + data.commentMemberName + '</p>';
+                    html2 += '                   <input type="hidden" class="form-control" name="commentMemberName" id="commentMemberName" value="' + data.commentMemberName + '">';
+                    html2 += '               </div>';
+                    html2 += '               <div class="dropdown">';
+                    html2 += '                   <div class="write-icon" data-bs-toggle="dropdown" aria-expanded="false">';
+                    html2 += '                       <img src="/imgSource/more.png" class="img-fluid">';
+                    html2 += '                   </div>';
+                    html2 += '                   <ul class="dropdown-menu">';
+                    html2 += '                       <li><button class="dropdown-item btn commentUpdateBtn">수정</button></li>';
+                    html2 += '                       <li><button class="dropdown-item btn commentDeleteBtn">삭제</button></li>';
+                    html2 += '                       <li><button class="dropdown-item btn commentSubmitBtn" style="display: none;" readonly>저장</button></li>';
+                    html2 += '                   </ul>';
+                    html2 += '               </div>';
+                    html2 += '           </div>';
+                    html2 += '        </div>';
+                    html2 += '        <div class="row my-3">';
+                    html2 += '            <div class="col-sm input-group">';
+                    html2 += '                <textarea readonly class="form-control border-0 align-self-start commentContents2" rows="5">' + data.commentContents + '</textarea>';
+                    html2 += '            </div>';
+                    html2 += '        </div>';
+                    html2 += '    </div>';
+                    html2 += '</form>';
+
+                    commentContainer1.append(html1);
+                    commentContainer2.append(html2);
+
+                    // textarea 초기화
+                    const textarea = clickedButton.closest(".commentBox").find("textarea.commentContents");
+                    textarea.val(''); // textarea 값을 비워줌
+                },
+                error: function () {
+                    alert("update 통신 오류");
+                }
+            });
+        });
+
+        //     댓글 삭제
+        $(document).on("click", ".commentDeleteBtn", function () {
+            const commentContainer = $(this).closest(".commentContainer"); // 삭제 버튼이 속한 댓글 컨테이너 요소를 찾음
+            const boardContainer = $(this).closest(".container"); // 삭제 버튼이 속한 게시물 컨테이너 요소를 찾음
+
+            const commentNum = $(this).parent().parent().data("comment-id"); // 게시물 컨테이너의 식별자 (댓글 개별 번호) 추출
+            const commentBoardNum = $(this).parent().parent().parent().parent().parent().parent().parent().parent().parent().find(".boardNum").val(); // 댓글이 속한 게시물 번호 추출
+
+            $.ajax({
+                url: "/main/deleteComment",
+                type: "POST",
+                data: { commentNum: commentNum, commentBoardNum: commentBoardNum }, // 게시물 ID 전송
+                success: function () {
+                    commentContainer.remove(); // 해당 게시물 컨테이너 삭제
+                },
+                error: function () {
+                    alert("delete 통신 오류");
+                }
+            });
+        });
+
+        // 댓글 수정 시 readonly 설정
+        $(document).on("click", ".commentUpdateBtn", function () {
+            // 페이지 접속 시 게시글 전체 readonly, 수정 시 해당 게시글 readonly 해제
+            const parentForm = $(this).parent().parent();
+
+            const textarea = parentForm.find("textarea");
+            const deleteBtn = parentForm.find(".commentDeleteBtn");
+            const updateBtn = parentForm.find(".commentUpdateBtn");
+            const submitBtn = parentForm.find(".commentSubmitBtn");
+
+            if (textarea.attr("readonly") == "readonly") {
+                textarea.removeAttr("readonly");
+                deleteBtn.removeClass("save-mode");
+                updateBtn.text("취소");
+                submitBtn.show();
+            } else {
+                textarea.attr('readonly', true);
+                deleteBtn.addClass("save-mode");
+                updateBtn.text("수정");
+                submitBtn.hide();
+            }
+        });
+
+        // 댓글 수정
+        $(document).on("click", ".commentSubmitBtn", function () {
+            //  댓글 수정 버튼 클릭시 ajax 통신
+            const commentBoardNum = $(this).parent().parent().parent().parent().parent().parent().parent().parent().parent().find(".boardNum").val(); // 댓글이 속한 게시물 번호 추출
+            const commentNum = $(this).parent().parent().data("comment-id"); // 게시물 컨테이너의 식별자 (댓글 개별 번호) 추출
+            const commentContents = $(this).parent().parent().find("textarea.commentContents2").val();
+
+            const commentContainer1 = $(this).closest(".commentBox").find(".commentScroll"); // 업데이트할 컨테이너1
+
+            // 수정 및 취소 버튼들
+            const parentForm = $(this).parent().parent();
+
+            const textarea = parentForm.find("textarea");
+            const deleteBtn = parentForm.find(".commentDeleteBtn");
+            const updateBtn = parentForm.find(".commentUpdateBtn");
+            const submitBtn = parentForm.find(".commentSubmitBtn");
+
+            $.ajax({
+                url: "/main/updateComment",
+                type: "POST",
+                data: {commentBoardNum: commentBoardNum, commentNum: commentNum, commentContents: commentContents },
+                success: function (data) {
+
+                    let html2 = '';
+                    html2 += '<form method="post">';
+                    html2 += '    <input type="hidden" class="form-control commentBoardNum" name="commentBoardNum" readonly value="' + commentBoardNum + '">';
+                    html2 += '    <div class="row">';
+                    html2 += '        <div class="col-sm">';
+                    html2 += '           <div class="d-flex justify-content-between">';
+                    html2 += '               <div class="d-flex input-group">';
+                    html2 += '                   <div class="profile rounded-circle me-3 align-self-center"><img src="/profilePhoto/defaultprofilephoto.png" class="img-fluid rounded-circle"> </div>';
+                    html2 += '                   <p class="align-self-center">' + data.commentMemberName + '</p>';
+                    html2 += '                   <input type="hidden" class="form-control" name="commentMemberName" id="commentMemberName" value="' + data.commentMemberName + '">';
+                    html2 += '               </div>';
+                    html2 += '               <div class="dropdown">';
+                    html2 += '                   <div class="write-icon" data-bs-toggle="dropdown" aria-expanded="false">';
+                    html2 += '                       <img src="/imgSource/more.png" class="img-fluid">';
+                    html2 += '                   </div>';
+                    html2 += '                   <ul class="dropdown-menu">';
+                    html2 += '                       <li><button class="dropdown-item btn commentUpdateBtn">수정</button></li>';
+                    html2 += '                       <li><button class="dropdown-item btn commentDeleteBtn">삭제</button></li>';
+                    html2 += '                       <li><button class="dropdown-item btn commentSubmitBtn" style="display: none;" readonly>저장</button></li>';
+                    html2 += '                   </ul>';
+                    html2 += '               </div>';
+                    html2 += '           </div>';
+                    html2 += '        </div>';
+                    html2 += '        <div class="row my-3">';
+                    html2 += '            <div class="col-sm input-group">';
+                    html2 += '                <textarea readonly class="form-control border-0 align-self-start commentContents2" rows="5">' + data.commentContents + '</textarea>';
+                    html2 += '            </div>';
+                    html2 += '        </div>';
+                    html2 += '    </div>';
+                    html2 += '</form>';
+
+                    commentContainer1.append(html2);
+
+                    textarea.removeAttr("readonly");
+
+                    if (textarea.attr("readonly") == "readonly") {
+                        textarea.removeAttr("readonly");
+                        deleteBtn.removeClass("save-mode");
+                        updateBtn.text("취소");
+                        submitBtn.show();
+                    } else {
+                        textarea.attr('readonly', true);
+                        deleteBtn.addClass("save-mode");
+                        updateBtn.text("수정");
+                        submitBtn.hide();
+                    }
+                },
+                error: function () {
+                    alert("update 통신 오류");
+                }
+            })
+        });
+    </script>
+</head>
+<body>
+<header th:replace="~{layout/header :: header-basic}"></header>
+
+<article class="container my-4r">
+    <!-- 글쓰기 -->
+    <div th:unless="${session.memberEmail} == null" class="container my-5">
+        <div class="row">
+            <div class="col-sm-8 mx-auto border-bottom">
+                <form id="frm1" action="/main/insert" method="post" enctype="multipart/form-data">
+                    <div class="d-flex">
+                        <div class="profile rounded-circle me-3 align-self-start">
+                            <img th:src="${userInfo.memberProfilePath}" class="img-fluid rounded-circle">
+                        </div>
+                        <textarea class="form-control border-0 align-self-start" name="boardContents"
+                                  placeholder="무슨 일이 일어나고 있나요?" type="text" rows="5"></textarea>
+                    </div>
+                    <div class="row my-4">
+                        <div class="col-sm">
+                            <div class="d-flex">
+                                <!-- 이미지 업로드 아이콘 -->
+                                <div class="write-icon rounded me-3">
+                                    <img src="/imgSource/imguploadicon.png" class="img-fluid">
+                                    <input type="file" class="opacity-0 form-control" name="uploadFiles">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm">
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary rounded-pill">글쓰기</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- 게시글 -->
+    <div class="mainList">
+        <div class="container my-6 border-bottom">
+            <div class="row">
+                <div class="col-sm-8 mx-auto mt-4 border-bottom ">
+                    <form method="post" th:if="${#lists.size(boardList)} > 0" th:each="item1 : ${boardList}"
+                          enctype="multipart/form-data">
+                        <input type="hidden" class="form-control boardNum" name="boardNum" readonly
+                               th:value="${item1.boardNum}">
+                        <div class="row">
+                            <div class="col-sm">
+                                <div class="d-flex input-group">
+                                    <div class="profile rounded-circle me-3 align-self-center"></div>
+                                    <p th:text="${item1.boardMemberName}" class="align-self-center">닉네임</p>
+                                    <input type="hidden" class="form-control" name="boardMemberName" id="boardMemberName"
+                                           th:value="${item1.boardMemberName}">
+                                </div>
+                            </div>
+                            <!-- 내용 -->
+                            <div class="row my-3">
+                                <div class="col-sm input-group">
+                                <textarea readonly th:text="${item1.boardContents}"
+                                          class="form-control border-0 align-self-start boardContents"
+                                          rows="5"></textarea>
+                                </div>
+                            </div>
+                            <!-- 사진 -->
+                            <div class="row my-3">
+                                <div class="col-sm d-flex">
+                                    <div class="board-image img-thumbnail justify-content-center"></div>
+                                </div>
+                            </div>
+                            <!-- 아이콘 -->
+                            <div class="row my-4">
+                                <div class="col-sm d-flex justify-content-between">
+                                    <!--                                댓글-->
+                                    <div class="write-icon commentBtn" id="commentBtn"></div>
+                                    <!-- 좋아요 -->
+                                    <div class="write-icon"></div>
+                                    <!-- 퍼가기 -->
+                                    <div class="write-icon"></div>
+                                </div>
+                            </div>
+                            <!-- 댓글  -->
+                            <div class="container my-6 border-bottom commentBox" id="commentBox" style="display: none;">
+                                <!--                            댓글 쓰기 -->
+                                <div class="row commentRow">
+                                    <div class="col-sm-8 mx-auto mt-4 border-bottom">
+                                        <form method="post" class="ms-5">
+                                            <div class="row ">
+                                                <div class="col-sm">
+                                                    <div class="d-flex">
+                                                        <div class="profile rounded-circle me-3 align-self-center"></div>
+                                                        <p class="align-self-center">닉네임</p>
+                                                    </div>
+                                                </div>
+                                                <!-- 내용 -->
+                                                <div class="row my-3">
+                                                    <div class="col-sm">
+                                                    <textarea
+                                                            class="form-control border-0 align-self-start commentContents"
+                                                            name="commentContents" type="text"
+                                                            rows="3">내용</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="row my-4">
+                                                    <div class="col-sm">
+                                                        <div class="d-flex justify-content-end">
+                                                            <button type="button" class="btn btn-primary rounded-pill btn-insertComment">댓글쓰기</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                                <div class="commentScroll">
+                                    <!--                                댓글 목록 불러오기 -->
+                                    <form method="post" th:if="${#lists.size(item1.commentList)} > 0"
+                                          th:each="item2 : ${item1.commentList}">
+                                        <input type="hidden" class="form-control commentBoardNum" name="commentBoardNum"
+                                               readonly th:value="${item1.boardNum}">
+                                        <div class="row">
+                                            <div class="col-sm">
+                                                <div class="d-flex input-group">
+                                                    <div class="profile rounded-circle me-3 align-self-center"></div>
+                                                    <p th:text="${item2.commentMemberName}" class="align-self-center">
+                                                        닉네임</p>
+                                                    <input type="hidden" class="form-control" name="commentMemberName"
+                                                           id="commentMemberName" th:value="${item2.commentMemberName}">
+                                                </div>
+                                            </div>
+                                            <!-- 내용 -->
+                                            <div class="row my-3">
+                                                <div class="col-sm input-group">
+                                                <textarea readonly th:text="${item2.commentContents}"
+                                                          class="form-control border-0 align-self-start commentContents2"
+                                                          rows="5"></textarea>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm d-flex justify-content-end">
+                                            <!--                                        댓글용 삭제 수정 저장-->
+                                            <button type="button" class="btn btn-danger commentDeleteBtn">삭제</button>
+                                            <button type="button" class="btn btn-success mx-2 commentUpdateBtn">수정</button>
+                                            <button type="button" class="btn btn-primary commentSubmitBtn"
+                                                    style="display: none;"
+                                                    readonly>저장</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm d-flex justify-content-end">
+                            <!--                            게시글용 삭제 수정 저장-->
+                            <button type="button" class="btn btn-danger deleteBtn">삭제</button>
+                            <button type="button" class="btn btn-success mx-2 updateBtn">수정</button>
+                            <button type="button" class="btn btn-primary submitBtn" style="display: none;" readonly>저장</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</article>
+
+<footer th:replace="~{layout/footer :: footer-basic}"></footer>
+</body>
+</html>
